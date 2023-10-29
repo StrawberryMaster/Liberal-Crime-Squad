@@ -34,61 +34,60 @@ void title_screen::choose_savefile_name()
 
 void title_screen::selectAndLoadSaveFile() {
 	s_savefiles = move(LCSSaveFiles());
-	char loaded = s_savefiles.size() > 0;
-	if (!loaded)
-	{
+
+	if (s_savefiles.empty()) {
 		choose_savefile_name();
-	}
-	else {
+	} else {
 		bool to_delete = false;
 		int page = 0;
-		// IsaacG This almost has to be redone
-		while (!len(savefile_name))
-		{
+
+		while (savefile_name.empty()) {
 			printSaveHeader(to_delete);
 			printSaveList(page, s_savefiles);
 			printSaveFooter(to_delete);
 
 			int c = getkeyAlt();
-			//PAGE UP
-			if (is_page_up(c) && page > 0)page--;
-			//PAGE DOWN
-			if (is_page_down(c) && (page + 1) * 19 < s_savefiles.size())page++;
-			if (c >= 'a'&&c <= 's')
-			{
-				const int p = page * 19 + c - 'a';
-				if (p < s_savefiles.size()) {
-					if (!to_delete) {
-						savefile_name = s_savefiles[p];
-					}
-					else {
-						printAreYouSure(s_savefiles[p]);
-						c = getkeyAlt();
-						if (c == 'y')
-						{
-							LCSDeleteFile(s_savefiles[p].c_str(), LCSIO_PRE_HOME);
-							s_savefiles = move(LCSSaveFiles());
+			int p = page * 19 + c - 'a';
+
+			switch (c) {
+				case 'a' ... 's':
+					if (p < s_savefiles.size()) {
+						if (!to_delete) {
+							savefile_name = s_savefiles[p];
+						} else {
+							printAreYouSure(s_savefiles[p]);
+							c = getkeyAlt();
+							if (c == 'y') {
+								LCSDeleteFile(s_savefiles[p].c_str(), LCSIO_PRE_HOME);
+								s_savefiles.erase(s_savefiles.begin() + p);
+							}
 						}
-						continue;
+					} else if (p == s_savefiles.size()) {
+						choose_savefile_name();
 					}
-				}
-				else if (p == s_savefiles.size()) {
-					choose_savefile_name();
-				}
+					break;
+				case 'v':
+					to_delete = !to_delete;
+					break;
+				case ESC:
+				case 'x':
+					end_game();
+					break;
+				default:
+					if (is_page_up(c) && page > 0) page--;
+					if (is_page_down(c) && (page + 1) * 19 < s_savefiles.size()) page++;
+					break;
 			}
-			else if (c == 'v') to_delete = !to_delete;
-			if (c == ESC || c == 'x') end_game();
 		}
 		load(savefile_name);
 	}
 }
-title_screen title_screen::s_title_singleton;
-bool title_screen::titleInitiated = false;
-title_screen title_screen::getInstance()
+title_screen* title_screen::s_title_singleton = nullptr;
+
+title_screen* title_screen::getInstance()
 {
-	if (!titleInitiated) {
-		titleInitiated = true;
-		s_title_singleton = title_screen();
+	if (s_title_singleton == nullptr) {
+		s_title_singleton = new title_screen();
 	}
 	return s_title_singleton;
 }

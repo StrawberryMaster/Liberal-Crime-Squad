@@ -1,20 +1,23 @@
 #pragma once
-class title_screen {
+#include <memory>
+#include <vector>
+#include <string>
 
+class title_screen {
 private:
-	static title_screen s_title_singleton;
-	static vector<string> s_savefiles;
-	static string savefile_name;
-	bool static autosave;
-	static bool titleInitiated;
+	static std::unique_ptr<title_screen> s_title_singleton;
+	std::vector<std::string> s_savefiles;
+	std::string savefile_name;
+	bool autosave;
+	bool titleInitiated;
 	void choose_savefile_name();
 	void selectAndLoadSaveFile();
 public:
-	static title_screen getInstance();
+	static title_screen& getInstance();
 	void mode_title();
-	string getFileName();
+	std::string_view getFileName() const noexcept;
 	void reset();
-	static void setautosaveoption(bool shouldautosave);
+	void setautosaveoption(bool shouldautosave);
 	void autosavegame();
 };
 /*
