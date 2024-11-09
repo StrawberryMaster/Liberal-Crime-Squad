@@ -62,7 +62,7 @@
                 Default: 1
             <successive_attacks_difficulty> (integer) Higher number makes it harder to hit more than once.
                 Default: 0
-            <strentgh_min> (integer) Minimum strength needed to use weapon without penalty. (Not for ranged.)
+            <strength_min> (integer) Minimum strength needed to use weapon without penalty. (Not for ranged.)
                 Default: 5
             <strength_max> (integer) Maximum strength that will give bonus when using weapon. (Not for ranged.)
                 Default: 10
@@ -129,7 +129,7 @@
             <number_attacks>
             <successive_attacks_difficulty>
             -->
-            <strentgh_min>5</strentgh_min>
+            <strength_min>5</strength_min>
             <strength_max>10</strength_max>
             <!--Need to be fixed in code.
             <random_damage>
