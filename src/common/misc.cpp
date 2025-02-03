@@ -210,39 +210,70 @@ void MusicClass::init()
 void MusicClass::quit()
 {
 #ifndef DONT_INCLUDE_SDL
-	if (!songsinitialized) return; // only shut down once
-	music.play(MUSIC_OFF);
-	for (int c = 0; c < MUSIC_OFF; c++) if (songs[c]) Mix_FreeMusic(songs[c]);
-	while (Mix_Init(0)) Mix_Quit();
-	Mix_CloseAudio();
-	SDL_Quit();
-	songsinitialized = false;
+    if (!songsinitialized) return; // only shut down once
+    
+    play(MUSIC_OFF); // stop music
+    
+    // fast clear of music resources
+    for (auto& song : songs) {
+        if (song) {
+            Mix_FreeMusic(song);
+            song = nullptr;
+        }
+    }
+    
+    // cleanup SDL subsystems
+    while (Mix_Init(0)) Mix_Quit();
+    Mix_CloseAudio();
+    SDL_QuitSubSystem(SDL_INIT_AUDIO);
+    
+    songsinitialized = false;
 #endif // DONT_INCLUDE_SDL
 }
 /* play music specified by a MusicMode */
 void MusicClass::play(int _musicmode)
 {
 #ifndef DONT_INCLUDE_SDL
-	if (!songsinitialized) init(); // if it hasn't been initialized already, do it now
-	if (_musicmode == MUSIC_CURRENT) return; // keep playing current music if that's what's requested
-	if (_musicmode == MUSIC_RANDOM) _musicmode = LCSrandom(MUSIC_OFF); // play a random song if that's what's requested
-	if (_musicmode == MUSIC_PREVIOUS) _musicmode = previous; // restore previous setting if that's what's requested
-	if (musicmode == _musicmode) return; // already playing the right music
-	previous = musicmode; // store previous setting
-	musicmode = _musicmode; // set musicmode to input
-	Mix_HaltMusic(); // stop any music that we're playing
-	if (musicmode < 0 || musicmode >= MUSIC_OFF)
-	{
-		musicmode = MUSIC_OFF; // just in case we had odd input, make sure we keep track that music is off
-		return; // return without playing music
-	}
-	if (!songs[musicmode]) // there was an error with Mix_LoadMUS() back when it was called on this song
-		return; // we can't play music if it isn't loaded, might as well return
-	if (Mix_PlayMusic(songs[musicmode], -1) != 0) // start playing the music, and have it loop indefinitely
-		gamelog.log(string(CONST_SDL_MIXER_FUNCTION_MIX_PLAYMUSIC_FAILED) + Mix_GetError()); // Music failed to play
-	enableIf(isEnabled());
+    if (!songsinitialized) init(); // if it hasn't been initialized already, do it now
+
+    // Resolve mode quickly
+    int resolved_mode = _musicmode;
+    if (_musicmode == MUSIC_CURRENT) return; // keep playing current music if that's what's requested
+    if (_musicmode == MUSIC_RANDOM) resolved_mode = LCSrandom(MUSIC_OFF); // play a random song if that's what's requested
+    if (_musicmode == MUSIC_PREVIOUS) resolved_mode = previous; // play a random song if that's what's requested
+
+    if (resolved_mode == musicmode && Mix_PlayingMusic()) return; // already playing the right music
+
+    // Validate mode range
+    if (resolved_mode < 0 || resolved_mode >= MUSIC_OFF) {
+        musicmode = MUSIC_OFF; // just in case we had odd input, make sure we keep track that music is off
+        return; // return without playing music
+    }
+
+    previous = musicmode; // store previous setting
+    musicmode = resolved_mode; // set musicmode to input
+
+    Mix_HaltMusic(); // stop any music that we're playing
+    if (songs[musicmode] && Mix_PlayMusic(songs[musicmode], -1) == 0) {  // start playing the music, and have it loop indefinitely
+        enableIf(enabled);
+    } else if (songs[musicmode]) {  // there was an error with Mix_LoadMUS() back when it was called on this song
+        gamelog.log(string(CONST_SDL_MIXER_FUNCTION_MIX_PLAYMUSIC_FAILED) + Mix_GetError()); // Music failed to play
+    }
 #endif // DONT_INCLUDE_SDL
 }
+
+void MusicClass::enableIf(bool e)
+{
+#ifndef DONT_INCLUDE_SDL
+    enabled = e;
+    constexpr int MUSIC_VOLUME = enabled ? (MIX_MAX_VOLUME / 2) : 0;
+    Mix_VolumeMusic(MUSIC_VOLUME);
+#endif
+}
+
+	MusicClass::MusicClass() : enabled(true) { }
+	bool MusicClass::isEnabled() { return enabled; }
+
 	Interval::Interval() : min(0), max(0) { }
 	Interval::Interval(int value) : min(value), max(value) { }
 	Interval::Interval(int low, int high) : min(low), max(high) { }
@@ -313,15 +344,6 @@ void MusicClass::play(int _musicmode)
 	{
 		for (int i = 0; i<INCOMETYPENUM; i++) dailyIncome[i] = 0;
 		for (int e = 0; e<EXPENSETYPENUM; e++) dailyExpense[e] = 0;
-	}
-	MusicClass::MusicClass() : enabled(true) { }
-	bool MusicClass::isEnabled() { return enabled; }
-	void MusicClass::enableIf(bool e)
-	{
-		enabled = e;
-#ifndef DONT_INCLUDE_SDL
-		Mix_VolumeMusic(enabled*(MIX_MAX_VOLUME / 2)); // half volume if music enabled, muted if music disabled
-#endif // DONT_INCLUDE_SDL
 	}
 
 
