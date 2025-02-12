@@ -608,27 +608,53 @@ vector<string> corporateSuffix;
 		 printWinnerOfElection(change);
 	 }
  }
- bool voteOnBill(const char canseethings, const int mood, const int propdir, const int p) {
+ bool voteOnBill(const char canseethings, const int mood, const int propdir, const int p)
+ {
+	 // precompute threshold for mood percentage
+	 const uint64_t mood_scaled = static_cast<uint64_t>(mood) * 0xFFFFFFFFULL;
+	 const uint32_t threshold = static_cast<uint32_t>(mood_scaled / 100);
+
+	 int yesvotes = 0;
 	 bool yeswin = false;
 	 bool recount = false;
-	 for (int l = 0, yesvotes = 0; l < 1000; l++)
+
+	 std::array<uint32_t, 1000> rand_values;
+	 for (auto &r : rand_values)
 	 {
-		 if (LCSrandom(100) < mood ? propdir == 1 : propdir == -1) yesvotes++;
-		 if (l == 999)
-		 {
-			 if (yesvotes > 500) yeswin = true;
-			 else if (yesvotes == 500) yeswin = (LCSrandom(100) < mood ? propdir == 1 : propdir == -1), recount = true;
-		 }
+		 r = r_num() - 1; // get random value in [0, 0xFFFFFFFE]
+	 }
+
+	 for (int l = 0; l < 1000; l++)
+	 {
+		 yesvotes += (rand_values[l] < threshold);
+
 		 if (canseethings && (l % 10 == 9))
 		 {
 			 printSingleVoteOnBill(l, yesvotes, yeswin, p);
 			 pause_ms(10);
 		 }
+
+		 // final vote processing
+		 if (l == 999)
+		 {
+			 if (yesvotes > 500)
+			 {
+				 yeswin = true;
+			 }
+			 else if (yesvotes == 500)
+			 {
+				 // Handle recount with single random check
+				 yeswin = (r_num() % 100) < mood;
+				 recount = true;
+			 }
+		 }
 	 }
-	 if (canseethings&&recount)
+
+	 if (canseethings && recount)
 	 {
 		 printCONST_A_RECOUNT_WAS_NECESSARY(p);
 	 }
+
 	 return yeswin;
  }
  void printCandidates(const char candidate[3][POLITICIAN_NAMELEN + 1]) {
